@@ -21,6 +21,6 @@ object SparkBuild extends Build {
           ),
     parallelExecution   := false,
     fork                := true,
-    javaOptions         += "-Xmx1g"
+    javaOptions         += "-Xmx256m"
     )
 }

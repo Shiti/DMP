@@ -5,7 +5,9 @@ import scala.math.max
 import scala.util.Random
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.Queue
+import scala.annotation.tailrec
 
 import com.typesafe.config.ConfigFactory
 import akka.actor.SupervisorStrategy
@@ -32,6 +34,22 @@ import akka.routing.Resizer
 import akka.routing.Route
 import akka.routing.RouteeProvider
 import akka.routing.RouterConfig
+
+
+/**
+ * Instructions to run.
+ *
+ *
+ * First configure application.conf to list seed nodes and your host.
+ * Then start Backend nodes first and they should be equal to No of blocks mentioned in Config.
+ * for starting backend nodes.
+ * sbt "run-main matrix.MatrixSolverBackend id"
+ * The id above is process if starting from 0. 1,2,3 etc.. should be continuous.
+ * Then start frontend in similar way to send jobs.
+ * sbt "run-main matrix.MatrixMultiplyFrontend"
+ */
+
+
 
 class MatrixIndexOutOfBoundsException(msg: String) extends RuntimeException(msg)
 
@@ -119,7 +137,6 @@ case class DistributedMatrix(name :String , row :Int, col : Int, noOfblocks : In
                              blockSize : Int, data :ArrayBuffer[Int]) {
 
   /* Compute padding and make square matrices*/
-  val (mPadded, nPadding) = MatrixMultiplierUtility.calculatePadding(row, col, blockSize)
 
   /** We think of it as padding if it does not exist in the array and yet in range of m x n */
   def rowMajorGet( i :Int , j :Int) : Int = {
@@ -153,7 +170,16 @@ case class DistributedMatrix(name :String , row :Int, col : Int, noOfblocks : In
 
 }
 
-object MatrixMultiplierUtility {
+//Set it up here.
+object Config {
+     val noOfBlocks = 4 // This is also equal to no of processes.
+     val blockSize = 5 // This is has to be calculated such that, its 1/2 (max of all dimensions, here it is 10)
+     val A = DistributedMatrix("A", 8, 9, noOfBlocks, blockSize, ArrayBuffer( 1 to 72 : _*)) /*<-- This is the place we specify matrices.*/
+     val B = DistributedMatrix("B", 9, 10, noOfBlocks, blockSize, ArrayBuffer( 1 to 90  : _*)) /*<-- This is the place we specify matrices.*/
+     val rounds = sqrt(noOfBlocks).toInt // No of rounds required to converge, So noOfBlocks should be a perfect square.
+}
+
+object Utility {
 
   def calculatePadding( m :Int, n :Int, blockSize : Int) :(Int,Int) = {
     var nPadding = 0
@@ -194,6 +220,7 @@ object MatrixMultiplyFrontend {
 
 }
 
+//This is no more used.
 case class Job (a : Matrix, b : Matrix)
 
 class MatrixMultiplyFrontend extends Actor with ActorLogging {
@@ -210,14 +237,39 @@ class MatrixMultiplyFrontend extends Actor with ActorLogging {
     log.info(s"$sender -> {}! = {}", n, matrix)
   }
 
+  import Config._
+
   def sendJobs(): Unit = {
-     val noOfBlocks = 4
-     val blockSize = 2
-     val A = DistributedMatrix("A", 4, 4, noOfBlocks, blockSize, ArrayBuffer( 1 to 16 : _*))
-     val B = DistributedMatrix("B", 4, 4, noOfBlocks, blockSize, ArrayBuffer( 1 to 16  : _*))
-     for (i <- (0 until noOfBlocks)){
-       backend ! ((i, Left(A.getSubMatrix(i))))
-       backend ! ((i, Up(B.getSubMatrix(i))))
+
+    @tailrec def downPid(pid : Int, recurse :Int) :Int = {
+       if(recurse == 0)
+           pid
+       else {
+           val (i ,j) = pidToijPair(pid)
+          downPid((if (i +1 >=rounds) (0) else (i + 1)) * rounds + j, recurse - 1) /*TODO:I should use modulus! here, but cant risk breaking it*/
+       }
+     }
+
+     @tailrec def rightPid(pid :Int, recurse :Int) :Int = {
+          if(recurse == 0){
+            println(s"pid:::$pid")
+           pid
+          }
+          else {
+               val (i ,j) = pidToijPair(pid)
+               println(s"i:$i,j:$j:recurse:$recurse")
+               rightPid(i * rounds + (if(j + 1 >= rounds) (0) else ( j + 1 ) ), recurse -1) /*TODO: This too...*/
+          }
+      }
+
+     def pidToijPair(pid :Int): (Int, Int) = ((pid / rounds) , (pid % rounds))
+
+     for (pid <- (0 until noOfBlocks)){
+       val (i ,j) = pidToijPair(pid)
+       val rPid = rightPid(pid, i)
+       val dPid = downPid(pid, j)
+       backend ! ((pid, 0,  Left(A.getSubMatrix(rPid))))
+       backend ! ((pid, 0,  Up(B.getSubMatrix(dPid))))
      }
   }
 }
@@ -228,20 +280,16 @@ object MatrixSolverBackend {
     val basePort = 2551
     if (args.nonEmpty) System.setProperty("akka.remote.netty.port", (2551 + args(0).toInt).toString)
 
-    // val config =
-    //   (if (args.nonEmpty) ConfigFactory.parseString(s"akka.remote.netty.tcp.port=${args(0)}")
-    //   else ConfigFactory.empty).withFallback(
-    //     ConfigFactory.parseString("akka.cluster.roles = [backend]")).
-    //     withFallback(ConfigFactory.load("application"))
-
     val system = ActorSystem("ClusterSystem", ConfigFactory.load("application"))
-    system.actorOf(Props(new MatrixSolverBackend(args(0).toInt, 4, 2)), name = "matrixmulBackend")
+    import Config._
+    system.actorOf(Props(new MatrixSolverBackend(args(0).toInt, noOfBlocks, blockSize)), name = "matrixmulBackend")
   }
 }
 
 sealed trait Event
 case class Left(matrix : Matrix) extends Event
 case class Up(matrix: Matrix) extends Event
+case class Nothing() extends Event
 
 /*
  * TODO:Assumption pid indexing from 0
@@ -264,13 +312,15 @@ class MatrixSolverBackend(pid: Int, nP : Int, n: Int) extends Actor with ActorLo
   val i = pid / rounds
   val j = pid % rounds
 
+  log.info("Started with i:{}, j:{} and pid:{}", i, j, pid)
+
   val upPid = (if (i -1 < 0) (rounds - 1) else (i - 1)) * rounds + j
   log.info("My up is:{}", upPid)
 
   val leftPid = i * rounds + (if(j - 1 < 0) (rounds - 1) else ( j - 1 ) )
   log.info("My left is:{}", leftPid)
 
-  val backLog = new Queue[Event]
+  val eventsMap = new TrieMap[Int, Event]
 
   def receive = {
 
@@ -278,52 +328,53 @@ class MatrixSolverBackend(pid: Int, nP : Int, n: Int) extends Actor with ActorLo
       log.info("Got job:{}x{}", a.name, b.name)
       Future(a x b) map { result ⇒ (n, result) } pipeTo sender
 
-    case (_i :Int, Left(matrixL : Matrix)) ⇒
+    case (_i :Int, roundId :Int, Left(matrixL : Matrix)) ⇒
+      val event = eventsMap getOrElse (roundId, Left(matrixL))
+      event match {
+        case Up(matrix : Matrix) ⇒ /*Process and remove*/
+                                   eventsMap -= roundId
+                                   log.info("MatrixC :{}", matrixC)
+                                   matrixC += (matrixL x matrix)
+                                   if(rounds > 1) {
+                                      log.info("performing round:{} for:{} on Left", rounds, pid)
+                                      backend ! ((upPid, roundId + 1, Up(matrix)))
+                                      backend ! ((leftPid, roundId + 1, Left(matrixL)))
+                                      rounds -= 1
+                                   } else log.info("on Left rounds finished. !!!! ")
+                                   log.info("MatrixC :{}", matrixC)
 
-      matrixB match {
-        case None ⇒ matrixA match {
-                     case None                 ⇒log.info("on Left collected matrix:{}",matrixL)
-                                                matrixA = Some(matrixL)
-                     case Some(matrix: Matrix) ⇒log.info("on Left collected backlog")
-                                                backLog += Left(matrix)
-                    }
+        case Left(_) ⇒  /* Append to map*/
+                        log.info("on Left collected matrix:{}",matrixL)
+                        eventsMap += ((roundId, Left(matrixL)))
 
-        case Some(matrix) ⇒ matrixB = None ; matrixA = None
-                            log.info("MatrixC :{}", matrixC)
-                            matrixC += (matrixL x matrix)
-                            if(rounds > 1) {
-                               log.info("performing round:{} for:{} on Left", rounds, pid)
-                               backend ! ((upPid, Up(matrix)))
-                               backend ! ((leftPid, Left(matrixL)))
-                               rounds-=1
-                            } else log.info("on Left rounds finished. !!!! ")
-                            log.info("MatrixC :{}", matrixC)
+        case Nothing() ⇒ /*Not possible*/
       }
 
       log.info("Got message from:{} -->Left",sender)
 
 
-    case (_i :Int , Up(matrixU : Matrix)) ⇒
-      matrixA match {
-        case None ⇒ matrixB match {
-                       case None                 ⇒ log.info("on Up collected matrix:{}",matrixU)
-                                                   matrixB = Some(matrixU)
-                       case Some(matrix: Matrix) ⇒ log.info("on Up collected backlog")
-                                                   backLog += Up(matrix)
-                    }
-        case Some(matrix) ⇒ matrixB = None ; matrixA = None
+    case (_i :Int , roundId :Int, Up(matrixU : Matrix)) ⇒
+        val event = eventsMap getOrElse (roundId, Up(matrixU))
+          event match {
+            case Up(_) ⇒ /* Append to map*/
+                        log.info("on Up collected matrix:{}", matrixU)
+                        eventsMap += ((roundId, Up(matrixU)))
+
+
+            case Left(matrix : Matrix) ⇒  /*Process and remove*/
+                            eventsMap -= roundId
                             log.info("MatrixC :{}", matrixC)
                             matrixC += (matrix x matrixU)
                             if(rounds > 1) {
                                log.info("performing round:{} for:{} on Up", rounds, pid)
-                               backend ! ((upPid, Up(matrixU)))
-                               backend ! ((leftPid,Left(matrix)))
-                               rounds-=1
-                            } else log.info("on Up rounds finished. !!!! ")
+                               backend ! ((upPid, roundId + 1, Up(matrixU)))
+                               backend ! ((leftPid, roundId + 1, Left(matrix)))
+                               rounds -= 1
+                            } else log.info("on Left rounds finished. !!!! ")
                             log.info("MatrixC :{}", matrixC)
 
-      }
-
+            case Nothing() ⇒ /*Not possible*/
+          }
       log.info("Got message from :{}-->Up",sender)
 
   }
@@ -336,7 +387,6 @@ case class CanonsAlgoRouter(nrOfInstances: Int = 0,
   def supervisorStrategy: SupervisorStrategy = SupervisorStrategy.defaultStrategy
 
   def createRoute(routeeProvider: RouteeProvider): Route = {
-
 
     routeeProvider.createRoutees(nrOfInstances)
 
@@ -356,10 +406,10 @@ case class CanonsAlgoRouter(nrOfInstances: Int = 0,
         val routeesMap  = Map(routeesPairs : _*)
         println(routeesMap)
         message match {
-          case (pid :Int, Left(matrix: Matrix)) ⇒
+          case (pid :Int, _x: Int, Left(matrix: Matrix)) ⇒
             println("Got left routee for " +  pid)
             List(Destination(sender,routeesMap(pid)))
-          case (pid :Int, Up(matrix: Matrix)) ⇒
+          case (pid :Int, _x: Int, Up(matrix: Matrix)) ⇒
             println("Got routee for " +  pid)
             List(Destination(sender,routeesMap(pid)))
         }
