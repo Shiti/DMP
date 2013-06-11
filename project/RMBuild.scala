@@ -11,7 +11,7 @@ object SparkBuild extends Build {
     name                := "rm",
     organization        := "org.rm-project",
     version             := "0.0.1-SNAPSHOT",
-    scalaVersion        := "2.10.1",
+    scalaVersion        := "2.10.2",
     scalacOptions       := Seq("-unchecked", "-optimize", "-deprecation", "-feature"),
     retrieveManaged     := true,
     libraryDependencies ++= Seq(
