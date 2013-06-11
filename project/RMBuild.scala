@@ -17,6 +17,8 @@ object SparkBuild extends Build {
     libraryDependencies ++= Seq(
           "org.scalatest"       %% "scalatest"                      % "1.9.1"   % "test",
           "org.scalacheck"      %% "scalacheck"                     % "1.10.1"  % "test",
+          "org.slf4j"           %  "slf4j-log4j12"                  % "1.7.2",
+          "com.typesafe"        %% "scalalogging-slf4j"             % "1.0.1",
           "com.typesafe.akka"   %% "akka-cluster-experimental"      % "2.1.4"
           ),
     parallelExecution   := false,

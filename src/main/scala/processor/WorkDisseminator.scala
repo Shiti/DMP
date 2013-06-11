@@ -14,10 +14,10 @@ import kernel.Config.B
 import kernel.Config.noOfBlocks
 import kernel.Config.rounds
 
-class MatrixMultiplyFrontend extends Actor with ActorLogging {
+class WorkDisseminator extends Actor with ActorLogging {
 
-  val backend = context.actorOf(Props(new MatrixMultiplyBackend(0, 0, 0))
-    .withRouter(ClusterRouterConfig(CanonsAlgoRouter(nrOfInstances = 8),
+  val backend = context.actorOf(Props(new MatrixProcessor(0, 0, 0))
+    .withRouter(ClusterRouterConfig(SimplePortRouter(nrOfInstances = 8),
       ClusterRouterSettings(totalInstances = 100, routeesPath = "/user/matrixmulBackend", allowLocalRoutees = false))),
     name = "matrixmulBackendRouter")
 
@@ -43,11 +43,9 @@ class MatrixMultiplyFrontend extends Actor with ActorLogging {
 
     @tailrec def rightPid(pid: Int, recurse: Int): Int = {
       if (recurse == 0) {
-        println(s"pid:::$pid")
         pid
       } else {
         val (i, j) = pidToijPair(pid)
-        println(s"i:$i,j:$j:recurse:$recurse")
         rightPid(i * rounds + (if (j + 1 >= rounds) (0) else (j + 1)), recurse - 1) /*TODO: This too...*/
       }
     }

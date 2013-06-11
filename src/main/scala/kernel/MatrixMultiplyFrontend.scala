@@ -20,7 +20,7 @@ object MatrixMultiplyFrontend {
 
     //#registerOnUp
     Cluster(system) registerOnMemberUp {
-      system.actorOf(Props[processor.MatrixMultiplyFrontend], name = "matrixmulFrontend")
+      system.actorOf(Props[processor.WorkDisseminator], name = "matrixmulFrontend")
     }
   }
 }

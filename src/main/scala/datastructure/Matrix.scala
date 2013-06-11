@@ -55,7 +55,6 @@ case class Matrix(name: String, m: Int, n: Int, var data: ArrayBuffer[Int]) {
     require(n == that.m, s"Matrix multiplication not possible, A( $m x $n) X B(${that.m} x ${that.n})\n")
     var c = Matrix("C", m, that.n, new ArrayBuffer())
     c.padTo(m * that.n)
-    println(s"Multiplying $this x $that")
     for (i <- 0 until m; j <- 0 until that.n; k <- 0 until n) {
       c.rowMajorSet(i, j, c.rowMajorGet(i, j) + rowMajorGet(i, k) * that.rowMajorGet(k, j))
     }

@@ -20,14 +20,15 @@ case class Nothing() extends Event
 /*
  * TODO:Assumption pid indexing from 0
  * */
-class MatrixMultiplyBackend(pid: Int, nP: Int, n: Int) extends Actor with ActorLogging {
+class MatrixProcessor(pid: Int, nP: Int, n: Int) extends Actor with ActorLogging {
 
-  lazy val backend = context.actorOf(Props(new MatrixMultiplyBackend(pid, nP, n))
-    .withRouter(ClusterRouterConfig(CanonsAlgoRouter(nrOfInstances = 2),
+  lazy val backend = context.actorOf(Props(new MatrixProcessor(pid, nP, n))
+    .withRouter(ClusterRouterConfig(SimplePortRouter(nrOfInstances = 2),
       ClusterRouterSettings(totalInstances = 100, routeesPath = "/user/matrixmulBackend", allowLocalRoutees = false))),
     name = "matrixmulBackendRouter")
 
   import context.dispatcher
+
   var rounds = sqrt(nP).toInt
 
   var matrixA: Option[Matrix] = None

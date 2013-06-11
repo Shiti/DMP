@@ -19,16 +19,17 @@ object Config {
   val A = DistributedMatrix("A", 8, 9, noOfBlocks, blockSize, ArrayBuffer(1 to 72: _*)) /*<-- This is the place we specify matrices.*/
   val B = DistributedMatrix("B", 9, 10, noOfBlocks, blockSize, ArrayBuffer(1 to 90: _*)) /*<-- This is the place we specify matrices.*/
   val rounds = sqrt(noOfBlocks).toInt // No of rounds required to converge, So noOfBlocks should be a perfect square.
+  val basePort = 2551
 }
 
 object MatrixMultiplyBackend {
   def main(args: Array[String]): Unit = {
+    import Config._
     // Override the configuration of the port when specified as program argument
-    val basePort = 2551
-    if (args.nonEmpty) System.setProperty("akka.remote.netty.port", (2551 + args(0).toInt).toString)
+    if (args.nonEmpty) System.setProperty("akka.remote.netty.port", (basePort + args(0).toInt).toString)
 
     val system = ActorSystem("ClusterSystem", ConfigFactory.load("application"))
-    import Config._
-    system.actorOf(Props(new processor.MatrixMultiplyBackend(args(0).toInt, noOfBlocks, blockSize)), name = "matrixmulBackend")
+
+    system.actorOf(Props(new processor.MatrixProcessor(args(0).toInt, noOfBlocks, blockSize)), name = "matrixmulBackend")
   }
 }
