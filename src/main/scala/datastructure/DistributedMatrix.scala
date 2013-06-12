@@ -14,12 +14,13 @@ case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int,
   blockSize: Int, data: ArrayBuffer[Int]) extends Logging {
 
   /** We think of it as padding if it does not exist in the array and yet in range of m x n */
-  def rowMajorGet(i: Int, j: Int): Int = {
+  private def rowMajorGet(i: Int, j: Int): Int = {
     if (i < row && j < col) {
       data(i * col + j)
     } else 0
   }
 
+  // This is supposed to be reimplemented for real distributed matrices
   def getSubMatrix(n: Int): Matrix = {
     require(n < noOfblocks, s"$n should be less than $noOfblocks and is indexed from 0 onwards")
     val blocks1D = sqrt(noOfblocks).toInt
