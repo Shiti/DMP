@@ -4,7 +4,7 @@
 
 ## To try out follow these steps.
 
-  * Setup: For quick trying out purposes and minimal configuration a few nodes can be started locally.
+* Setup: For quick trying out purposes and minimal configuration a few nodes can be started locally.
 
     `$ sbt dist`
 
@@ -20,9 +20,14 @@
 
      `$ bin/start kernel.Backend 3`
 
- * Using:  Once backend nodes are running. You connect via sbt console and try multiplying example matrices.
+
+* Using:  Once backend nodes are running. You connect via sbt console and try multiplying example matrices.
 
      `$ sbt> console`
+
+
+_......A lot of logs dump on screen from akka-cluster......_
+
 
      `scala> A.persist //Will persist the sample matrix A`
 
