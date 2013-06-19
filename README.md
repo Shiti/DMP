@@ -35,7 +35,7 @@ _......A lot of logs dump on screen from akka-cluster......_
 
      `scala> val C = A x B // this will multiply them, and it happens on the cluster not local.`
 
-     `scala> val C = C x B // this will again multiply them, and it happens on the cluster not local.`
+     `scala> val C = C x B // this will again multiply them.`
 
      `scala> C.getMatrix // To see the content of the matrix and get a local matrix from DM.`
 
