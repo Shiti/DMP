@@ -23,10 +23,12 @@ case class Matrix(name: String, m: Int, n: Int, private val data: ArrayBuffer[In
     s"""\nMatrix $name dimensions $m x $n a row major order traversal\n""" + (for (w <- data.grouped(n)) yield (w.mkString(" "))).mkString("\n")
   }
 
+  def copyWithName(name: String): Matrix = Matrix(name, m, n, data)
+
   /** Not a user API. Used for testing.*/
   private[datastructure] def getData = ArrayBuffer(data :_*)
 
-  /** We think of it as padding if it does not exist in the array and yet in range of m x n */
+  /** We think of it as padding if it does not exist in the array and not in range of m x n */
   def rowMajorGet(i: Int, j: Int): Int = {
     if (i < m && j < n) {
       data(i * n + j)
@@ -62,4 +64,23 @@ case class Matrix(name: String, m: Int, n: Int, private val data: ArrayBuffer[In
     c
   }
 
+  def ++ (that: Matrix) : Matrix = {
+    require(m == that.m, s"Append column wise impossible with different rows $m != ${that.m}")
+    val data2 = that.getData
+    //Really stupid and slow. But was in a hurry.
+    val combined = (data.grouped(n) zip data2.grouped(that.n)).map{case (x,y) => x++y }.reduce (_ ++ _)
+    Matrix(name +"++"+that.name, m, n + that.n, combined)
+  }
+
+  def ::+ (that: Matrix) : Matrix = {
+    require(n == that.n, s"Append row wise impossible with different rows $n != ${that.n}")
+    val data2 = that.getData
+    val combined = (data ++ data2)
+    Matrix(name +"::"+that.name, m + that.m, n , combined)
+  }
+
+}
+
+object Matrix {
+    def empty(name: String) = Matrix( name, 0, 0, ArrayBuffer())
 }

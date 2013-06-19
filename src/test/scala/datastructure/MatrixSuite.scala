@@ -75,4 +75,20 @@ class MatrixSuite extends FunSuite {
     assert(expectedMat === (matA + matB))
   }
 
+  test("Appending matrices row wise should give a appended matrix") {
+    val matA = mat
+    val data2  = ArrayBuffer( (10 until (10 + (m*n))) : _*)
+    val matB = Matrix("B", m, n, data2)
+    val expectedMat = Matrix("A++B", m, n + matB.n, ArrayBuffer(1, 2, 3, 4, 10, 11, 12, 13,5, 6, 7, 8, 14, 15, 16, 17,9, 10, 11, 12, 18, 19, 20, 21, 13, 14, 15, 16, 22, 23, 24, 25,17, 18, 19, 20, 26, 27, 28, 29))
+    assert(expectedMat === (matA ++ matB))
+  }
+
+  test("Appending matrices column wise should give a appended matrix") {
+    val matA = mat
+    val data2  = ArrayBuffer( (10 until (10 + (m*n))) : _*)
+    val matB = Matrix("B", m, n, data2)
+    val expectedMat = Matrix("A::B", m + matB.m, n, ArrayBuffer(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29))
+    assert(expectedMat === (matA ::+ matB))
+  }
+
 }
