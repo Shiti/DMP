@@ -30,18 +30,20 @@ object config {
 
   object routers {
     object systems {
-      lazy val system = ActorSystem("ClusterSystem", ConfigFactory.load("application"))
+      val config = ConfigFactory.parseString("akka.cluster.roles = [frontend]").
+                    withFallback(ConfigFactory.load("application"))
+      lazy val system = ActorSystem("ClusterSystem", config)
     }
 
-    val processorCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixProcessor", allowLocalRoutees = false)
+    val processorCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixProcessor", allowLocalRoutees = false, useRole = Some("backend"))
     val processorCRC = ClusterRouterConfig(SimplePortRouter(0, nrOfInstances = 100), processorCRS)
 
-    val storeCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixStore", allowLocalRoutees = true)
+    val storeCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixStore", allowLocalRoutees = true, useRole = Some("backend") )
     val storeCRC = ClusterRouterConfig(SimplePortRouter(0, nrOfInstances = 100), storeCRS)
 
     object context {
       import kernel.config.routers.systems._
-        lazy val processorRouter = system.actorOf(Props(new processor.MatrixProcessor(0, 0, 0)).withRouter(processorCRC), name = "matrixProcessorRouter")
+        lazy val processorRouter = system.actorOf(Props(new processor.CanonsProcessor(0, 0, 0)).withRouter(processorCRC), name = "canonsProcessorRouter")
         lazy val storeRouter = system.actorOf(Props[processor.MatrixStore].withRouter(storeCRC), name = "matrixStoreRouter")
         lazy val facade = system.actorOf(Props[processor.WorkDisseminator].withDispatcher("work-disseminator-dispatcher"), name = "matrixFacade")
       }

@@ -34,7 +34,7 @@ case class SimplePortRouter(pid :Int, nrOfInstances: Int = 0,
       case (sender, message) ⇒
         logger.trace(s"Sender: $sender")
         //Extract port number from akka url, used for routing.
-        val port = """.*akka.\/\/.*:(\d+).*""".r
+        val port = """.*akka.tcp.\/\/.*:(\d+).*""".r
         val routeesPairs = routeeProvider.routees map {
           x ⇒
             x.toString match {

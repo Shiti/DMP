@@ -24,7 +24,6 @@ import implicits.ImplicitConversions.FurtherExtendedActorSystem
 case object Started
 case class Multiply(nameA: DistributedMatrix, nameB: DistributedMatrix)
 
-
 class WorkDisseminator extends Actor with ActorLogging {
 
   import kernel.config.routers._
@@ -41,27 +40,10 @@ class WorkDisseminator extends Actor with ActorLogging {
   def postStart(): Unit = {
          storeRouter
          processorRouter
-      // if(areWorkersReady(noOfBlocks - 1 )) {
-     //      //sendJobs()
-     //      log.info("Waiting for results")
-     //      awaitResults
-     //      log.info("Got results")
-     //      getResults()
-     //  }else {
-     //    log.info("Workers not ready yet.!!")
-     // }
   }
 
   def reset() = {
     countDownLatch  = new CountDownLatch(noOfBlocks)
-  }
-
-  def getResults() = {
-   for (pid <- (0 until noOfBlocks)) {
-       val future = storeRouter ? ((pid, Get("AxB")))
-       val result = Await.result(future, timeout.duration).asInstanceOf[datastructure.Matrix]
-       log.info(s"$result")
-    }
   }
 
   def awaitResults() = {
@@ -75,19 +57,19 @@ class WorkDisseminator extends Actor with ActorLogging {
   def receive = {
 
     case Started ⇒
-      // log.info("got started!!")
-      // val f = future {
-      //   println("Executing in future!!")
-      //   postStart
-      // }
+      log.info("got started!!")
+      val f = future {
+        println("Executing in future!!")
+        postStart
+      }
 
-      // f onSuccess {
-      //   case _ => println("Success!!")
-      // }
+      f onSuccess {
+        case _ => println("Success!!")
+      }
 
-      // f onFailure {
-      //   case t => t.printStackTrace ; println("An error has occured: " + t)
-      // }
+      f onFailure {
+        case t => t.printStackTrace ; println("An error has occured: " + t)
+      }
 
     case (n: Int, matrix: Matrix) ⇒
       log.info(s"$sender -> {}! = {}", n, matrix)

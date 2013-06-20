@@ -48,7 +48,7 @@ object Dependencies {
 object Dependency {
 
   object v {
-    val Akka      = "2.1.4"
+    val Akka      = "2.2.0-RC1"
     val slf4j     = "1.7.2"
     val log       = "1.0.1" /* <- this has to be removed with http://blog.tmorris.net/posts/the-writer-monad-using-scala-example */
     val test      = "1.9.1"
@@ -61,7 +61,7 @@ object Dependency {
 
   val akkaKernel  = "com.typesafe.akka"  %% "akka-kernel"                % v.Akka
   val akkaSlf4j   = "com.typesafe.akka"  %% "akka-slf4j"                 % v.Akka
-  val akkaCluster = "com.typesafe.akka"  %% "akka-cluster-experimental"  % v.Akka
+  val akkaCluster = "com.typesafe.akka"  %% "akka-cluster"               % v.Akka
   val log4j12     = "org.slf4j"           % "slf4j-log4j12"              % v.slf4j
   val slf4j       = "com.typesafe"       %% "scalalogging-slf4j"         % v.log
   val test        = Seq("org.scalatest"  %% "scalatest"                  % v.test  % s.test,

@@ -22,8 +22,6 @@ case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int, 
 
   import kernel.config.routers.context._
 
-  // This weird check is temporary! and only for checking if DM was created as a result or user created it.
-
   def persist = {
      if(blockSize != 0){
        for (pid <- (0 until noOfblocks)) {
@@ -33,7 +31,6 @@ case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int, 
   }
 
   implicit val timeout = Timeout(10.seconds)
-  // println("\nDEBUG: testing\n" + getMatrix())
 
   /** We think of it as padding if it does not exist in the array and yet in range of m x n */
   private def rowMajorGet(i: Int, j: Int): Int = {
@@ -48,7 +45,6 @@ case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int, 
     val blocks1D = sqrt(noOfblocks).toInt
     val i1 = n / blocks1D
     val j1 = n % blocks1D
-
     val i = i1 * blockSize
     val j = j1 * blockSize
     val k = i + blockSize

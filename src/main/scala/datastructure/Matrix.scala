@@ -73,7 +73,7 @@ case class Matrix(name: String, m: Int, n: Int, private val data: ArrayBuffer[In
   }
 
   def ::+ (that: Matrix) : Matrix = {
-    require(n == that.n, s"Append row wise impossible with different rows $n != ${that.n}")
+    require(n == that.n, s"Append row wise impossible with different columns $n != ${that.n}")
     val data2 = that.getData
     val combined = (data ++ data2)
     Matrix(name +"::"+that.name, m + that.m, n , combined)

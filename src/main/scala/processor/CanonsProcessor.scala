@@ -45,17 +45,15 @@ case object Ready extends ExecutionStatus
 case object Processing extends ExecutionStatus
 case object Finished extends ExecutionStatus
 
-class MatrixProcessor(pid: Int, nP: Int, n: Int) extends Actor with ActorLogging {
+class CanonsProcessor(pid: Int, nP: Int, n: Int) extends Actor with ActorLogging {
 
-  // import kernel.config.routers.context._
-
-  val processorCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixProcessor", allowLocalRoutees = false)
+  val processorCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixProcessor", allowLocalRoutees = false, useRole = Some("backend") )
   val processorCRC = ClusterRouterConfig(SimplePortRouter(pid, nrOfInstances = 100), processorCRS)
 
-  val storeCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixStore", allowLocalRoutees = true)
+  val storeCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixStore", allowLocalRoutees = true, useRole = Some("backend"))
   val storeCRC = ClusterRouterConfig(SimplePortRouter(pid, nrOfInstances = 100), storeCRS)
 
-  lazy val processorRouter = context.actorOf(Props(new MatrixProcessor(pid, nP, n)).withRouter(processorCRC), name = "matrixProcessorRouter")
+  lazy val processorRouter = context.actorOf(Props(new CanonsProcessor(pid, nP, n)).withRouter(processorCRC), name = "canonsProcessorRouter")
 
   lazy val storeRouter = context.actorOf(Props[MatrixStore].withRouter(storeCRC), name = "matrixStoreRouter" )
 
@@ -68,7 +66,7 @@ class MatrixProcessor(pid: Int, nP: Int, n: Int) extends Actor with ActorLogging
   val i = pid / rounds.get
   val j = pid % rounds.get
 
-  var currentExecutionContext : Option[ActorRef] = None
+  var currentExecutionContext : Option[ActorSelection] = None
 
   val upPid = (if (i - 1 < 0) (rounds.get - 1) else (i - 1)) * rounds.get + j
 
@@ -145,7 +143,7 @@ class MatrixProcessor(pid: Int, nP: Int, n: Int) extends Actor with ActorLogging
        log.info(s"DEBUG: Got message as ready? from $facadePath")
        val status = currentExecutionContext match {
          case None ⇒
-            currentExecutionContext = Some(context.actorFor(facadePath))
+            currentExecutionContext = Some(context.actorSelection(facadePath))
             Ready
          case _    ⇒
             Processing
