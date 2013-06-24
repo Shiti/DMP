@@ -29,10 +29,10 @@ object config {
   // }
 
   object routers {
-    object systems {
+
       val config = ConfigFactory.parseString("akka.cluster.roles = [frontend]").
                                  withFallback(ConfigFactory.load("application"))
-      lazy val system = ActorSystem("ClusterSystem", config)
+       val system = ActorSystem("ClusterSystem", config)
     }
 
 
@@ -40,9 +40,8 @@ object config {
     val storeCRC = ClusterRouterConfig(SimplePortRouter(0, nrOfInstances = 100), storeCRS)
 
     object context {
-      import kernel.config.routers.systems._
+      import kernel.config.routers._
         lazy val storeRouter = system.actorOf(Props[processor.MatrixStore].withRouter(storeCRC), name = "matrixStoreRouter")
         lazy val facade = system.actorOf(Props[processor.WorkDisseminator].withDispatcher("work-disseminator-dispatcher"), name = "matrixFacade")
       }
-  }
 }

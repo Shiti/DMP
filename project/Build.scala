@@ -16,15 +16,28 @@ object DMPBuild extends Build {
 
   lazy val dmp = Project("dmp", file("."), settings = dmpSettings)configs(MultiJvm)
 
+  val logo = """
+              ________   _____  __________
+              ___/ __ \  __/  |/  /__/ __ \
+              __/ / / /  _/ /|_/ /__/ /_/ /
+              _/ /_/ /  _/ /  / / _/ ____/
+              /_____/   /_/  /_/  /_/
+            \.Distributed Matrix Processor./
+  """
   //Init commands loaded before starting scala repl from sbt.
   val initCommands = """
-    akka.kernel.Main.main(Array[String]("kernel.Frontend"))
-    import kernel.config.exampleMatrix._
+    import kernel.config._
+    import kernel.config.routers._
     import scala.concurrent.duration._
     import akka.util.Timeout
+    import akka.actor.Props
+    import datastructure._ //These are user apis
     implicit val timeout = Timeout(5.seconds)
-    println("Hello from Distributed Matrix Processor!!\n")
-  """
+    lazy val storeRouter = system.actorOf(Props[processor.MatrixStore].withRouter(storeCRC), name = "matrixStoreRouter")
+    lazy val facade = system.actorOf(Props[processor.WorkDisseminator].withDispatcher("work-disseminator-dispatcher"), name = "matrixFacade")
+    implicit lazy val context = DMPContext(storeRouter, facade)
+    println("$logo")
+  """.replace("$logo","\"\""+logo+"\"\"")
 
   def dmpSettings = Defaults.defaultSettings ++ AkkaKernelPlugin.distSettings ++ SbtMultiJvm.multiJvmSettings ++ Seq (
       name                                   :=  "dmp",
