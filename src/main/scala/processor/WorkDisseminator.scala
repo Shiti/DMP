@@ -26,8 +26,11 @@ case class Multiply(nameA: DistributedMatrix, nameB: DistributedMatrix)
 
 class WorkDisseminator extends Actor with ActorLogging {
 
-  import kernel.config.routers._
-  import kernel.config.routers.context._
+  val processorCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixProcessor", allowLocalRoutees = false, useRole = Some("backend"))
+
+  val processorCRC = ClusterRouterConfig(SimplePortRouter(0, nrOfInstances = 100), processorCRS)
+
+  lazy val processorRouter = context.actorOf(Props(new processor.CanonsProcessor(0, 0, 0)).withRouter(processorCRC), name = "canonsProcessorRouter")
 
   implicit val timeout = Timeout(5.seconds)
 
@@ -38,8 +41,7 @@ class WorkDisseminator extends Actor with ActorLogging {
   import context.dispatcher
 
   def postStart(): Unit = {
-         storeRouter
-         processorRouter
+      processorRouter
   }
 
   def reset() = {

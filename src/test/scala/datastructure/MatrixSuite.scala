@@ -11,13 +11,13 @@ class MatrixSuite extends FunSuite {
   val data = ArrayBuffer(1 to (m * n): _*)
   val mat = Matrix(name, m, n, data)
 
-  test("Requirement fails on initializing Matrix data with incorrect size ") {
-    val dataI = ArrayBuffer(1 to 100: _*)
-    val thrown = intercept[IllegalArgumentException] {
-      Matrix("BadMatrix", m, n, dataI)
-    }
-    assert(thrown.getMessage === s"requirement failed: Can not initialize matrix with ${dataI.length} != $m * $n")
-  }
+  // test("Requirement fails on initializing Matrix data with incorrect size ") {
+  //   val dataI = ArrayBuffer(1 to 100: _*)
+  //   val thrown = intercept[IllegalArgumentException] {
+  //     Matrix("BadMatrix", m, n, dataI)
+  //   }
+  //   assert(thrown.getMessage === s"requirement failed: Can not initialize matrix with ${dataI.length} != $m * $n")
+  // }
 
   test("Matrix can not be initialized with empty name ") {
 

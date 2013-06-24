@@ -13,24 +13,24 @@ import com.typesafe.scalalogging.slf4j.Logging
 
 import processor._
 
+case class DMPContext(storeRouter : ActorRef, facade :  ActorRef)
+
 /**
  * Distributed Matrix an abstraction representing a matrix distributed across multiple nodes.
  * NoOfBlocks*blocksize will be new padded size of the matrix. noOfBlocks should be a perfect
  * Square.
  */
-case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int, blockSize: Int, data: ArrayBuffer[Int]) extends Logging {
-
-  import kernel.config.routers.context._
+case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int, blockSize: Int, data: ArrayBuffer[Int])(implicit context : DMPContext, timeout :Timeout) extends Logging {
 
   def persist = {
      if(blockSize != 0){
        for (pid <- (0 until noOfblocks)) {
-         storeRouter ! ((pid, Store(name, getSubMatrixI(pid)) ))
+         context.storeRouter ! ((pid, Store(name, getSubMatrixI(pid)) ))
        }
      }
   }
 
-  implicit val timeout = Timeout(10.seconds)
+
 
   /** We think of it as padding if it does not exist in the array and yet in range of m x n */
   private def rowMajorGet(i: Int, j: Int): Int = {
@@ -54,7 +54,7 @@ case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int, 
   }
 
   def getSubMatrix(n: Int)(implicit timeout: Timeout): Matrix = {
-    val future = storeRouter ? ((n, Get(name)))
+    val future = context.storeRouter ? ((n, Get(name)))
     Await.result(future, timeout.duration).asInstanceOf[datastructure.Matrix]
   }
 
@@ -67,7 +67,7 @@ case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int, 
   }
 
   def x (that :DistributedMatrix) :DistributedMatrix = {
-    val future = facade ? Multiply(this, that)
+    val future = context.facade ? Multiply(this, that)
     Await.result(future, timeout.duration)
     logger.info("Multiplied {}",name +"x"+ that.name)
     DistributedMatrix(name +"x"+ that.name, noOfblocks)
@@ -84,9 +84,8 @@ case class DistributedMatrix(name: String, row: Int, col: Int, noOfblocks: Int, 
   }
 }
 
-
 object DistributedMatrix {
-  def apply(name :String, noOfBlocks: Int):DistributedMatrix = {
+  def apply (name :String, noOfBlocks: Int)(implicit context : DMPContext, timeout :Timeout) :DistributedMatrix = {
     DistributedMatrix(name, 0, 0, noOfBlocks,0, ArrayBuffer())
   }
 }

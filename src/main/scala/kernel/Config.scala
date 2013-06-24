@@ -23,27 +23,24 @@ object config {
   val rounds = sqrt(noOfBlocks).toInt // No of rounds required to converge, So noOfBlocks should be a perfect square.
   val basePort = 2551
 
-  object exampleMatrix {
-      lazy val A = DistributedMatrix("A", 8, 9, noOfBlocks, blockSize, ArrayBuffer(1 to 72: _*)) /*<-- This is the place we specify matrices.*/
-      lazy val B = DistributedMatrix("B", 9, 10, noOfBlocks, blockSize, ArrayBuffer(1 to 90: _*)) /*<-- This is the place we specify matrices.*/
-  }
+  // object exampleMatrix {
+  //     lazy val A = DistributedMatrix("A", 8, 9, noOfBlocks, blockSize, ArrayBuffer(1 to 72: _*)) /*<-- This is the place we specify matrices.*/
+  //     lazy val B = DistributedMatrix("B", 9, 10, noOfBlocks, blockSize, ArrayBuffer(1 to 90: _*)) /*<-- This is the place we specify matrices.*/
+  // }
 
   object routers {
     object systems {
       val config = ConfigFactory.parseString("akka.cluster.roles = [frontend]").
-                    withFallback(ConfigFactory.load("application"))
+                                 withFallback(ConfigFactory.load("application"))
       lazy val system = ActorSystem("ClusterSystem", config)
     }
 
-    val processorCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixProcessor", allowLocalRoutees = false, useRole = Some("backend"))
-    val processorCRC = ClusterRouterConfig(SimplePortRouter(0, nrOfInstances = 100), processorCRS)
 
     val storeCRS = ClusterRouterSettings(totalInstances = 1000, routeesPath = "/user/matrixStore", allowLocalRoutees = true, useRole = Some("backend") )
     val storeCRC = ClusterRouterConfig(SimplePortRouter(0, nrOfInstances = 100), storeCRS)
 
     object context {
       import kernel.config.routers.systems._
-        lazy val processorRouter = system.actorOf(Props(new processor.CanonsProcessor(0, 0, 0)).withRouter(processorCRC), name = "canonsProcessorRouter")
         lazy val storeRouter = system.actorOf(Props[processor.MatrixStore].withRouter(storeCRC), name = "matrixStoreRouter")
         lazy val facade = system.actorOf(Props[processor.WorkDisseminator].withDispatcher("work-disseminator-dispatcher"), name = "matrixFacade")
       }

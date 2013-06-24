@@ -15,7 +15,7 @@ class MatrixIndexOutOfBoundsException(msg: String) extends RuntimeException(msg)
  */
 case class Matrix(name: String, m: Int, n: Int, private val data: ArrayBuffer[Int]) {
 
-  require(m * n == data.size, s"Can not initialize matrix with ${data.length} != $m * $n")
+  require(m * n >= data.size, s"Can not initialize matrix with ${data.length} < $m * $n")
 
   require(name.size != 0, "Name of the matrix can not be left empty!")
 
@@ -82,5 +82,5 @@ case class Matrix(name: String, m: Int, n: Int, private val data: ArrayBuffer[In
 }
 
 object Matrix {
-    def empty(name: String) = Matrix( name, 0, 0, ArrayBuffer())
+    def empty(name: String) = Matrix( name, 1, 1, ArrayBuffer(1))
 }
