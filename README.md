@@ -8,7 +8,8 @@
 
     `$ sbt dist`
 
-   * After this copy the generated `dist` in `target/dist` to your convenient location and replace bin/* with scripts/*
+   * After this copy the generated `dist` in `target/dist` to your convenient location and
+   copy the scripts from scripts directory to `dist/bin/`
 
    * Then start **four** different nodes by doing this in four different terminals.
 
