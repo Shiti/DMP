@@ -30,9 +30,9 @@ _...... prints logo and some commands ......_
 
      `scala> import scala.collection.mutable.ArrayBuffer`
 
-     `scala> val A = DistributedMatrix("A", 8, 9, noOfBlocks, blockSize, ArrayBuffer(1 to 72: _*)) to 72: _*))`
+     `scala> val A = DistributedMatrix("A", 8, 9, noOfBlocks, blockSize, ArrayBuffer(1 to 72: _*))`
 
-     `scala> val B = DistributedMatrix("B", 8, 9, noOfBlocks, blockSize, ArrayBuffer(1 to 72: _*)) to 72: _*))`
+     `scala> val B = DistributedMatrix("B", 8, 9, noOfBlocks, blockSize, ArrayBuffer(1 to 72: _*))`
 
      `scala> A.persist //Will persist the sample matrix A`
 
